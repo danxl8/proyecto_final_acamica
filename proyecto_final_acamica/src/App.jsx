@@ -1,63 +1,83 @@
-import logo from './logo.svg';
+
 import './App.css';
-import {firestore} from './firebase';
+import React, { useEffect, useState } from "react";
 import { firestore, loginConGoogle, auth, logout } from "./firebase";
 
 
-function App() {
-
+export default function App() {
   const [tweets, setTweets] = useState([]);
   const [tweet, setTweet] = useState({
     tweet: "",
-    autor: ""
+    autor: "",
+    id: ""
   });
   const [user, setUser] = useState(null);
 
   useEffect(() => {
     const desuscribir = firestore
-      .collection("tweets")
+      .collection("prueba")
       .onSnapshot((snapshot) => {
-        const tweets = snapshot.docs.map((doc) => {
-          return {
-            tweet: doc.data().tweet,
-            autor: doc.data().autor,
-            id: doc.id,
-            likes: doc.data().likes
-          };
-        });
-        setTweets(tweets);
+          const tweetsData = snapshot.docs.map((doc) => {
+            return {
+              tweet: doc.data().tweet,
+              autor: doc.data().autor,
+              id: doc.id
+            };
+          });
+
+
+          setTweets(tweetsData);
+
       });
 
-    auth.onAuthStateChanged((user) => {
-      setUser(user);
-      console.log(user);
-    });
-    return () => desuscribir();
+      auth.onAuthStateChanged((user) => {
+        setUser(user);
+        console.log(user);
+      });
+      return () => desuscribir();
+
   }, []);
 
+  const sendTweet = (e) => {
+    e.preventDefault();
+
+    // Paso 1: Guardar el tweet como dato en la BBDD Firestore
+    let enviarTweet = firestore.collection("prueba").add(tweet);
+
+    // Paso 2: Luego de guardar el tweet en la BBDD, Obtener la referencia del documento (TweetRef)
+    let solicitarDocumento = enviarTweet.then((docRef) => {
+      return docRef.get();
+    });
+
+    // Paso 3: En base a la referencia, traer el tweet en sí e insertarlo en el estado
+    solicitarDocumento.then((doc) => {
+      let nuevoTweet = {
+        tweet: doc.data().tweet,
+        autor: doc.data().autor,
+        id: doc.id
+      };
+      setTweets([nuevoTweet, ...tweets]);
+    });
+  };
+
+  const deleteTweet = (id) => {
+    // borramos el tweet en firebase
+    firestore.doc(`prueba/${id}`).delete();
+  };
+
+  // Handler único for inputs (2 inputs: tweet y autor), gracias al e.target.name. Ya no es necesario hacer un handler por c/input
   const handleChange = (e) => {
     let nuevoTweet = {
       ...tweet,
       [e.target.name]: e.target.value
     };
-
     setTweet(nuevoTweet);
-  };
-
-  const deleteTweet = (id) => {
-    // borramos el tweet en firebase
-    firestore.doc(`tweets/${id}`).delete();
-  };
-
-  const likeTweet = (id, likes) => {
-    if (!likes) likes = 0;
-    // actualizamos el tweet en firebase
-    firestore.doc(`tweets/${id}`).update({ likes: likes + 1 });
   };
 
   return (
     <div className="App">
-      {user ? (
+
+{user ? (
         <>
           <div className="user-profile">
             <img className="user-profile-pic" src={user.photoURL} alt="" />
@@ -70,6 +90,7 @@ function App() {
           Login con google
         </button>
       )}
+
       <form className="formulario">
         <textarea
           name="tweet"
@@ -93,25 +114,12 @@ function App() {
       <h1>Tweets:</h1>
       {tweets.map((tweet) => {
         return (
-          <div className="tweet-container">
-            <div className="tweet" key={tweet.id}>
-              <div className="tweet-info">
-                <p>{tweet.tweet}</p>
-                <p className="tweet-autor">por: {tweet.autor}</p>
-              </div>
-              <div className="acciones">
-                <span onClick={() => deleteTweet(tweet.id)} className="delete">
-                  borrar
+          <div className="card" key={tweet.id}>
+            <h4 className="autor">{tweet.autor}</h4>
+            <h2 className="tweet">{tweet.tweet}</h2>
+            <span onClick={() => deleteTweet(tweet.id)} className="delete">
+                  X
                 </span>
-                <span
-                  onClick={() => likeTweet(tweet.id, tweet.likes)}
-                  className="likes"
-                >
-                  <img height="13px" src={corazon} alt="" />
-                  <span>{tweet.likes ? tweet.likes : 0}</span>
-                </span>
-              </div>
-            </div>
           </div>
         );
       })}
@@ -119,4 +127,3 @@ function App() {
   );
 }
 
-export default App;

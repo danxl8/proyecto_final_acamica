@@ -20,8 +20,11 @@ export const firestore = firebase.firestore()
 //El módulo de autenticación
 export const auth=firebase.auth();
 
+//El provedodr de la autenticación
+export const provider = new firebase.auth.GoogleAuthProvider();
+
 //El proveedor de autenticación
-export const loginConGoogle = () => auth.signInWithPopup(provider);
+export const loginConGoogle = () => auth.signInWithPopup(provider)
 
 //La utilidad para hacer logout
 export const logout = () => auth.signOut();
